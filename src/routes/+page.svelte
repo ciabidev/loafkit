@@ -25,7 +25,10 @@
 	import NavbarLogo from '$components/nav/NavbarLogo.svelte';
 	import NavTab from '$components/nav/NavTab.svelte';
 	import { createDialog } from '$lib/state/dialogs';
-	import { listFlavors } from '$lib/state/flavor-registry';
+	import SmallDialogView from '$components/dialog/SmallDialog.svelte';
+	import PickerDialogView from '$components/dialog/PickerDialog.svelte';
+	import { flavorDefinitions, registerFlavor } from '$lib/state/flavor-registry';
+	import { emotionDefinitions, registerEmotion } from '$lib/state/emotion-registry';
 	type CardVariant = 'flat' | 'bordered' | 'elevated' | 'ghost';
 
 	const cardVariants: Array<{ variant: CardVariant; description: string }> = [
@@ -42,11 +45,13 @@
 		'right-bottom'
 	] as const;
 
-	const flavorItems = listFlavors().map((definition) => ({
-		title: definition.name,
-		description: definition.description,
-		image: definition.iconPath
-	}));
+	const flavorItems = $derived(
+		$flavorDefinitions.map((definition) => ({
+			title: definition.name,
+			description: definition.description,
+			image: definition.iconPath
+		}))
+	);
 
 	let textInput = $state('');
 	let longInput = $state('');
@@ -56,6 +61,13 @@
 	let toggleEnabled = $state(false);
 	let lockedToggle = $state(false);
 	let popoverVisible = $state(false);
+	let composedDialogVisible = $state(false);
+	let customPickerVisible = $state(false);
+	let closeComposedDialog = $state<() => void>(() => {});
+	let closeCustomPicker = $state<() => void>(() => {});
+	let dialogInput = $state('');
+	let galleryFlavorAdded = $state(false);
+	let galleryEmotionAdded = $state(false);
 	let cardClicks = $state(0);
 	let episodePlaying = $state(false);
 	let selectedPickerItem = $state('None');
@@ -78,17 +90,51 @@
 		createDialog({
 			id: 'component-gallery-picker-dialog',
 			type: 'picker',
-			items: [
-				{ type: 'photo', url: '/emotions/happy.png', text: 'happy' },
-				{ type: 'photo', url: '/emotions/confused.png', text: 'confused' },
-				{ type: 'photo', url: '/emotions/surprised.png', text: 'surprised' },
-				{ type: 'photo', url: '/emotions/unamused.png', text: 'unamused' }
-			],
+			title: 'pick a mood',
+			description: 'this copy and the media icon come from the app.',
+			iconSrc: '/favicon/favicon.svg',
+			items: $emotionDefinitions
+				.filter((definition) => !!definition.src)
+				.slice(0, 4)
+				.map((definition, index) => ({
+					type: 'photo',
+					url: definition.src,
+					text: definition.name,
+					Icon: index === 0 ? SearchIcon : undefined
+				})),
 			buttons: [{ text: 'done', main: true, action: () => {} }],
 			onSelect: (item) => {
 				selectedPickerItem = item.text ?? item.url ?? 'unnamed item';
 			}
 		});
+	};
+
+	const openCustomAssetsDialog = () => {
+		createDialog({
+			id: 'component-gallery-custom-assets-dialog',
+			type: 'small',
+			title: 'your own artwork',
+			bodyText: 'pass image paths or Svelte components for dialog visuals.',
+			iconSrc: '/favicon/favicon.svg',
+			illustrationSrc: '/flavor_icons/rain.png',
+			buttons: [{ text: 'got it', main: true }]
+		});
+	};
+
+	const addGalleryFlavor = () => {
+		registerFlavor({
+			name: 'gallery mint',
+			description: 'registered after the picker mounted',
+			iconPath: '/favicon/favicon-96x96.png',
+			isDark: false,
+			cssVariables: { '--loaf-accent': '#43af73', '--loaf-accent-secondary': '#38885c' }
+		});
+		galleryFlavorAdded = true;
+	};
+
+	const addGalleryEmotion = () => {
+		registerEmotion({ name: 'gallery search', Component: SearchIcon });
+		galleryEmotionAdded = true;
 	};
 </script>
 
@@ -120,7 +166,14 @@
 				</Card>
 			{/each}
 		</div>
-		<p class="subtext">interactive cards keep their colors while pressed. tap or click one to test it.</p>
+		<p class="subtext">
+			interactive cards keep their colors while pressed. tap or click one to test it.
+		</p>
+		<Card
+			name="styled card"
+			description="class and style can tailor the outer surface."
+			style="--loaf-card: var(--loaf-surface-secondary); max-width: 18rem"
+		/>
 		<div class="paragraph-text">
 			<h3>make cards your own</h3>
 			<p>put whatever you want inside a card: images, videos, or even more cards.</p>
@@ -199,7 +252,9 @@
 			<Contact Icon={LinkIcon} href="https://github.com/ciabidev/loaf-web" />
 		</div>
 		<p class="subtext inline-link-example">
-			inline links should sit naturally in a sentence, like <Link url="https://github.com/ciabidev/loaf-web">the Loafkit UI repository</Link>.
+			inline links should sit naturally in a sentence, like <Link
+				url="https://github.com/ciabidev/loaf-web">the Loafkit UI repository</Link
+			>.
 		</p>
 	</section>
 
@@ -220,6 +275,11 @@
 			>
 				<Input
 					id="gallery-text-input"
+					name="gallery-search"
+					autocomplete="off"
+					required
+					ariaLabel="gallery search input"
+					style="max-width: 28rem"
 					placeholder="type something"
 					Icon={SearchIcon}
 					bind:value={textInput}
@@ -309,15 +369,52 @@
 	<section class="gallery-section">
 		<div class="section-heading paragraph-text">
 			<h2>dialogs and popovers</h2>
-			<p>overlay entry points, phone-friendly picker options, and inline expanded/collapsed states.</p>
+			<p>
+				overlay entry points, phone-friendly picker options, and inline expanded/collapsed states.
+			</p>
 		</div>
 		<div class="component-row">
 			<button onclick={openSmallDialog}>open small dialog</button>
 			<button onclick={openPickerDialog}>open picker dialog</button>
+			<button onclick={openCustomAssetsDialog}>custom dialog images</button>
+			<button onclick={() => (composedDialogVisible = true)}>custom dialog content</button>
+			<button onclick={() => (customPickerVisible = true)}>custom picker items</button>
 			<button onclick={() => (popoverVisible = !popoverVisible)}>
 				{popoverVisible ? 'close popover' : 'open popover'}
 			</button>
 		</div>
+		{#if composedDialogVisible}
+			<SmallDialogView
+				id="gallery-composed-dialog"
+				title="your own content"
+				Icon={SearchIcon}
+				buttons={[{ text: 'done', main: true }]}
+				class="gallery-composed-dialog"
+				style="--loaf-popup-bg: var(--loaf-surface-secondary)"
+				onClose={() => (composedDialogVisible = false)}
+				bind:close={closeComposedDialog}
+			>
+				<p>this input is a direct child of the dialog.</p>
+				<Input id="gallery-dialog-input" placeholder="type something" bind:value={dialogInput} />
+				<button type="button" onclick={closeComposedDialog}>close from inside</button>
+			</SmallDialogView>
+		{/if}
+		{#if customPickerVisible}
+			<PickerDialogView
+				id="gallery-custom-picker"
+				title="custom options"
+				description="picker items can render your markup."
+				items={[{ text: 'first' }, { text: 'second' }]}
+				buttons={[{ text: 'done', main: true }]}
+				onSelect={(item) => (selectedPickerItem = item.text ?? 'unnamed item')}
+				onClose={() => (customPickerVisible = false)}
+				bind:close={closeCustomPicker}
+			>
+				<p class="subtext">this text is a direct child above the picker items.</p>
+				<button type="button" onclick={closeCustomPicker}>close picker from inside</button>
+				{#snippet itemContent(item)}<span class="gallery-picker-choice">{item.text}</span>{/snippet}
+			</PickerDialogView>
+		{/if}
 		<p class="subtext">last picker selection: {selectedPickerItem}</p>
 		<div class="popover-stage">
 			<Popover
@@ -325,6 +422,7 @@
 				expanded={popoverVisible}
 				title="popover"
 				description="popovers can hold whatever content you give them."
+				style="max-width: 20rem"
 			>
 				<button class="button--primary">popover action</button>
 			</Popover>
@@ -347,10 +445,18 @@
 		/>
 		<p class="subtext">tag labels pick a readable text color from their background.</p>
 
+		<p class="subtext">these named emotions come from the app's image registration.</p>
+		<button type="button" onclick={addGalleryEmotion} disabled={galleryEmotionAdded}>
+			{galleryEmotionAdded ? 'component emotion added' : 'register a component emotion'}
+		</button>
 		<div class="emotion-row">
 			<Emoticon emotion="happy" size="small" />
 			<Emoticon emotion="confused" size="small" />
 			<Emoticon emotion="unamused" size="small" />
+			<Emoticon src="/favicon/favicon-96x96.png" alt="custom icon" size="small" />
+			{#if galleryEmotionAdded}
+				<Emoticon emotion="gallery search" alt="search icon" size="small" />
+			{/if}
 		</div>
 
 		<Profile name="Loaf" src="/favicon/favicon-96x96.png" />
@@ -367,11 +473,19 @@
 		<div class="section-heading paragraph-text">
 			<h2>navigation</h2>
 		</div>
+		<button type="button" onclick={addGalleryFlavor} disabled={galleryFlavorAdded}>
+			{galleryFlavorAdded ? 'gallery mint added to flavor picker' : 'add a flavor to the picker'}
+		</button>
 		<div class="nav-previews">
 			<div class="horizontal-nav-preview">
-				<Navbar test position="bottom">
+				<Navbar test position="bottom" style="--loaf-nav-bg: var(--loaf-surface-secondary)">
 					<NavTab name="gallery" Icon={GridIcon} path="/" active />
-					<NavTab name="test route" Icon={LinkIcon} path="/test2" />
+					<NavTab
+						name="test route"
+						Icon={LinkIcon}
+						path="/test2"
+						style="--loaf-nav-highlight: var(--loaf-accent)"
+					/>
 					<NavTab name="a very long test route" Icon={LinkIcon} path="/test3" />
 				</Navbar>
 			</div>
@@ -594,6 +708,15 @@
 
 	.popover-stage {
 		min-height: 9rem;
+	}
+
+	.gallery-picker-choice {
+		display: grid;
+		place-items: center;
+		width: 100%;
+		height: 100%;
+		background: var(--loaf-accent-secondary);
+		color: var(--loaf-text-on-accent);
 	}
 
 	.emotion-row :global(.emotion) {

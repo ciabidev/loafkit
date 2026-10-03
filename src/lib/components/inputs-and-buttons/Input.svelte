@@ -9,14 +9,25 @@
 		min_width = '100%',
 		id = null,
 		type = 'text',
-		long = false
+		long = false,
+		name = undefined,
+		autocomplete = undefined,
+		disabled = false,
+		required = false,
+		inputMode = undefined,
+		minLength = undefined,
+		maxLength = undefined,
+		ariaLabel = undefined,
+		ariaDescribedBy = undefined,
+		class: className = '',
+		style = undefined
 	} = $props();
 </script>
 
 <div
-	class="input-wrapper"
+	class="input-wrapper {className}"
 	class:focused={isFocused}
-	style="--width: {width}; --min-width: {min_width}"
+	style="--width: {width}; --min-width: {min_width}; {style ?? ''}"
 >
 	{#if Icon}
 		<div class="icon">
@@ -33,6 +44,15 @@
 			onblur={() => (isFocused = false)}
 			{placeholder}
 			{id}
+			{name}
+			{autocomplete}
+			{disabled}
+			{required}
+			inputmode={inputMode}
+			minlength={minLength}
+			maxlength={maxLength}
+			aria-label={ariaLabel}
+			aria-describedby={ariaDescribedBy}
 			rows="4"
 		></textarea>
 	{:else}
@@ -45,6 +65,15 @@
 			{placeholder}
 			{id}
 			{type}
+			{name}
+			{autocomplete}
+			{disabled}
+			{required}
+			inputmode={inputMode}
+			minlength={minLength}
+			maxlength={maxLength}
+			aria-label={ariaLabel}
+			aria-describedby={ariaDescribedBy}
 		/>
 	{/if}
 </div>

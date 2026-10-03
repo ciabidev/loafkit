@@ -1,46 +1,80 @@
 <script lang="ts">
+	import type { Component as SvelteComponent } from 'svelte';
 	import type { Emotion } from '../../types/emoticon.ts';
-	import angry from '../../assets/emotions/angry.png';
-	import awkward from '../../assets/emotions/awkward.png';
-	import confused from '../../assets/emotions/confused.png';
-	import happy from '../../assets/emotions/happy.png';
-	import sad from '../../assets/emotions/sad.png';
-	import surprised from '../../assets/emotions/surprised.png';
-	import unamused from '../../assets/emotions/unamused.png';
+	import { emotionDefinitions } from '../../state/emotion-registry.js';
 
-	type Props = {
-		emotion: Emotion;
+	type Props = (
+		| { emotion: Emotion; src?: string; Component?: SvelteComponent }
+		| { emotion?: never; src: string; Component?: SvelteComponent }
+		| { emotion?: never; src?: never; Component: SvelteComponent }
+	) & {
 		size?: 'small' | 'medium' | 'large';
+		alt?: string;
+		class?: string;
+		style?: string;
 	};
 
-	const { emotion, size = 'medium' }: Props = $props();
+	const {
+		emotion,
+		src,
+		Component,
+		alt,
+		size = 'medium',
+		class: className = '',
+		style
+	}: Props = $props();
 
-	const emotionSources: Record<Emotion, string> = {
-		angry,
-		awkward,
-		confused,
-		happy,
-		sad,
-		surprised,
-		unamused
-	};
+	const definition = $derived(
+		emotion ? $emotionDefinitions.find((item) => item.name === emotion) : undefined
+	);
+	const Visual = $derived(Component ?? (src ? undefined : definition?.Component));
+	const imageSrc = $derived(Component ? undefined : (src ?? definition?.src));
+	const label = $derived(alt ?? (src || Component ? undefined : definition?.alt));
 </script>
 
-<img
-	class="emotion {emotion}"
-	src={emotionSources[emotion]}
-	alt={emotion}
-	aria-hidden="true"
-	class:small={size === 'small'}
-	class:medium={size === 'medium'}
-	class:large={size === 'large'}
-/>
+{#if Visual}
+	<span
+		class="emotion {className}"
+		data-emotion={emotion}
+		role={label ? 'img' : undefined}
+		aria-label={label}
+		aria-hidden={!label}
+		{style}
+		class:small={size === 'small'}
+		class:medium={size === 'medium'}
+		class:large={size === 'large'}
+	>
+		<Visual />
+	</span>
+{:else if imageSrc}
+	<img
+		class="emotion {className}"
+		data-emotion={emotion}
+		src={imageSrc}
+		alt={label ?? ''}
+		aria-hidden={!label}
+		{style}
+		class:small={size === 'small'}
+		class:medium={size === 'medium'}
+		class:large={size === 'large'}
+	/>
+{/if}
 
 <style>
 	.emotion {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
 		width: 1em;
 		height: 1em;
 		border-radius: var(--loaf-radius-md);
+		object-fit: contain;
+	}
+
+	.emotion :global(svg),
+	.emotion :global(img) {
+		width: 100%;
+		height: 100%;
 	}
 
 	.emotion.small {

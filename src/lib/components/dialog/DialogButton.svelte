@@ -54,16 +54,27 @@
 </script>
 
 {#if button.link}
-	<a class="button button--link" class:active={button.main} href={button.link}>
+	<a
+		class="button button--link {button.class ?? ''}"
+		class:active={button.main}
+		href={button.link}
+		style={button.style}
+		onclick={() => {
+			button.action?.();
+			closeFunc();
+		}}
+	>
 		{button.text}
 	</a>
 {:else}
 	<button
-		class="button {button.color === 'red' ? 'button--danger' : ''}"
+		type="button"
+		class="button {button.color === 'red' ? 'button--danger' : ''} {button.class ?? ''}"
 		class:active={button.main}
+		style={button.style}
 		{disabled}
 		onclick={async () => {
-			await button.action();
+			await button.action?.();
 			closeFunc();
 		}}
 	>

@@ -3,6 +3,8 @@
 
 	interface Props {
 		test?: boolean;
+		class?: string;
+		style?: string;
 		position?:
 			| 'top'
 			| 'right'
@@ -15,10 +17,16 @@
 		children: Snippet;
 	}
 
-	let { test = false, position = 'bottom', children }: Props = $props();
+	let {
+		test = false,
+		position = 'bottom',
+		class: className = '',
+		style,
+		children
+	}: Props = $props();
 </script>
 
-<nav class="navbar" class:test data-position={position}>
+<nav class="navbar {className}" {style} class:test data-position={position}>
 	<div
 		class="navbar-tabs"
 		role="tablist"

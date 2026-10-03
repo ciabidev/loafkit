@@ -1,51 +1,47 @@
 import { writable } from 'svelte/store';
 import { applyFlavor, getFlavor } from './flavor-registry.js';
 
-const defaultFlavor = 'rain';
-const defaultFlavorDef = getFlavor(defaultFlavor);
 
-let initialFlavor = defaultFlavor;
-let initialFlavorType = defaultFlavorDef?.isDark ? 'dark' : 'light';
 
-if (typeof window !== 'undefined') {
-	try {
-		const storedFlavor = localStorage.getItem('flavor');
-		const storedFlavorType = localStorage.getItem('flavorType');
-		const storedFlavorDef = storedFlavor ? getFlavor(storedFlavor) : undefined;
+export const flavor = writable('');
+export const flavorType = writable<'light' | 'dark'>('light');
 
-		if (storedFlavor) initialFlavor = storedFlavor;
-		if (storedFlavorDef) initialFlavorType = storedFlavorDef.isDark ? 'dark' : 'light';
-		if (storedFlavorType === 'dark' || storedFlavorType === 'light') {
-			initialFlavorType = storedFlavorType;
-		}
-	} catch {
-		// Storage can be unavailable in privacy modes; in-memory theming still works.
+let storageKey: string | undefined;
+
+export function initializeFlavors(options: { defaultFlavor?: string; storageKey?: string } = {}): void {
+	const { defaultFlavor } = options;
+
+	if (defaultFlavor && !getFlavor(defaultFlavor)) {
+		throw new Error(`Unknown default flavor "${defaultFlavor}"`);
 	}
+
+	storageKey = options.storageKey;
+	let selectedFlavor = defaultFlavor;
+	if (storageKey && typeof localStorage !== 'undefined') {
+		try {
+			const savedFlavor = localStorage.getItem(storageKey);
+			if (savedFlavor && getFlavor(savedFlavor)) selectedFlavor = savedFlavor;
+		} catch {
+			// Storage can be unavailable; the configured default still applies.
+		}
+	}
+
+	if (selectedFlavor) flavor.set(selectedFlavor);
 }
 
-export const flavor = writable(initialFlavor);
-export const flavorType = writable(initialFlavorType);
+flavor.subscribe((name) => {
+	if (!name) return;
+	const definition = getFlavor(name);
+	if (!definition) return;
 
-let didInit = false;
+	flavorType.set(definition.isDark ? 'dark' : 'light');
+	applyFlavor(name);
 
-flavor.subscribe((value) => {
-	if (!didInit) {
-		didInit = true;
-		return;
-	}
-
-	if (typeof window === 'undefined' || !value) return;
-
-	try {
-		const flavorDef = getFlavor(value);
-		if (!flavorDef) return;
-
-		localStorage.setItem('flavor', value);
-		const newFlavorType = flavorDef.isDark ? 'dark' : 'light';
-		flavorType.set(newFlavorType);
-		localStorage.setItem('flavorType', newFlavorType);
-		applyFlavor(value);
-	} catch {
-		// Storage can be unavailable in privacy modes; applying the flavor is best effort.
+	if (storageKey && typeof localStorage !== 'undefined') {
+		try {
+			localStorage.setItem(storageKey, name);
+		} catch {
+			// The in-memory selection still works without storage.
+		}
 	}
 });

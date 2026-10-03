@@ -16,6 +16,8 @@
 		banner?: string;
 		tiny?: string;
 		pad?: boolean;
+		class?: string;
+		style?: string;
 	}
 
 	let {
@@ -29,15 +31,17 @@
 		description,
 		img,
 		banner,
-		tiny
+		tiny,
+		class: className = '',
+		style
 	}: Props = $props();
 </script>
 
 {#snippet cardContents()}
 	{#if banner}
-	<div class="banner-container">
-		<div class="banner" style:background-image={`url(${banner})`}></div>
-	</div>
+		<div class="banner-container">
+			<div class="banner" style:background-image={`url(${banner})`}></div>
+		</div>
 	{/if}
 
 	<div class="card-content" class:pad>
@@ -60,15 +64,21 @@
 {/snippet}
 
 {#if onclick}
-	<button type="button" class="card {variant} interactive" aria-label={name} {onclick}>
+	<button
+		type="button"
+		class="card {variant} interactive {className}"
+		{style}
+		aria-label={name}
+		{onclick}
+	>
 		{@render cardContents()}
 	</button>
 {:else if url}
-	<a class="card {variant} interactive" href={url} aria-label={name}>
+	<a class="card {variant} interactive {className}" {style} href={url} aria-label={name}>
 		{@render cardContents()}
 	</a>
 {:else}
-	<div class="card {variant}">
+	<div class="card {variant} {className}" {style}>
 		{@render cardContents()}
 	</div>
 {/if}
@@ -89,21 +99,21 @@
 	a.card {
 		text-decoration: none;
 	}
-.banner-container {
-	width: 100%;
-	height: 9.375rem;
-	overflow: hidden; 
-}
+	.banner-container {
+		width: 100%;
+		height: 9.375rem;
+		overflow: hidden;
+	}
 
-.banner {
-	width: 100%;
-	height: 100%;
-	background-position: center;
-	background-repeat: no-repeat;
-	background-size: cover;         
-	transform: scale(1);           
+	.banner {
+		width: 100%;
+		height: 100%;
+		background-position: center;
+		background-repeat: no-repeat;
+		background-size: cover;
+		transform: scale(1);
 		transition: transform 0.45s ease;
-}
+	}
 
 	.card.flat {
 		background: var(--loaf-card);
@@ -170,6 +180,4 @@
 	.tiny {
 		font-size: 0.75rem;
 	}
-
-
 </style>

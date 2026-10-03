@@ -8,6 +8,6 @@ export function createDialog(newDialog: DialogInfo) {
 	dialog.set(newDialog);
 }
 
-export function killDialog() {
-	dialog.set(null);
+export function killDialog(id?: string) {
+	dialog.update((current) => (!id || current?.id === id ? null : current));
 }

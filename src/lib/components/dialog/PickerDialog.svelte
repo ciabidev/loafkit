@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { Component, Snippet } from 'svelte';
 	import type { DialogButton } from '../../types/dialog.js';
 	import type { DialogPickerItem } from '../../types/dialog.js';
 
@@ -8,40 +9,85 @@
 
 	let {
 		id,
+		title = 'select an option',
+		description = 'choose from the options below',
+		iconSrc,
+		Icon,
+		iconContent,
+		itemContent,
+		children,
+		footer,
 		items = undefined,
 		buttons = undefined,
 		onSelect = undefined,
-		dismissable = true
+		dismissable = true,
+		managed = false,
+		onClose,
+		close = $bindable(() => {}),
+		class: className = '',
+		style,
+		ariaLabel
 	}: {
 		id: string;
+		title?: string;
+		description?: string;
+		iconSrc?: string;
+		Icon?: Component;
+		iconContent?: Snippet;
+		itemContent?: Snippet<[DialogPickerItem, number]>;
+		children?: Snippet;
+		footer?: Snippet<[() => void]>;
 		items?: DialogPickerItem[];
 		buttons?: DialogButton[];
 		onSelect?: (item: DialogPickerItem) => void;
 		dismissable?: boolean;
+		managed?: boolean;
+		onClose?: () => void;
+		close?: () => void;
+		class?: string;
+		style?: string;
+		ariaLabel?: string;
 	} = $props();
-
-	let close: () => void = $state(() => {});
 </script>
 
-<DialogContainer {id} {dismissable} bind:close>
+<DialogContainer
+	{id}
+	{dismissable}
+	{managed}
+	{onClose}
+	class={className}
+	{style}
+	{ariaLabel}
+	labelledBy={title ? `dialog-${id}-title` : undefined}
+	bind:close
+>
 	<div class="dialog-body picker-dialog" class:three-columns={items && items.length <= 3}>
 		<div class="popup-header">
 			<div class="popup-title-container">
-				<!-- Icon would go here -->
-				<h2 class="popup-title">select an option</h2>
+				{#if iconContent}
+					<span class="popup-icon" aria-hidden="true">{@render iconContent()}</span>
+				{:else if Icon}
+					<span class="popup-icon" aria-hidden="true"><Icon /></span>
+				{:else if iconSrc}
+					<img class="popup-icon" src={iconSrc} alt="" />
+				{/if}
+				{#if title}<h2 id="dialog-{id}-title" class="popup-title">{title}</h2>{/if}
 			</div>
-			<div class="subtext popup-description">choose from the options below</div>
+			{#if description}<div class="subtext popup-description">{description}</div>{/if}
 		</div>
-		<div class="picker-body">
-			{#if items}
+		{#if children}
+			<div class="picker-content">{@render children()}</div>
+		{/if}
+		{#if items?.length}
+			<div class="picker-body">
 				{#each items as item, i (item)}
-					{#if item?.url}
-						<PickerItem {item} number={i + 1} {onSelect} />
-					{/if}
+					<PickerItem {item} number={i + 1} {onSelect} {itemContent} />
 				{/each}
-			{/if}
-		</div>
-		{#if buttons}
+			</div>
+		{/if}
+		{#if footer}
+			{@render footer(close)}
+		{:else if buttons}
 			<DialogButtons {buttons} closeFunc={close} />
 		{/if}
 	</div>
@@ -52,9 +98,12 @@
 		--picker-item-size: clamp(
 			4rem,
 			calc(
-				(100dvw - var(--loaf-safe-area-left) - var(--loaf-safe-area-right) -
-						var(--loaf-popup-padding) - var(--loaf-popup-padding) -
-						var(--picker-item-gap) - var(--picker-item-gap)) / 3
+				(
+						100dvw - var(--loaf-safe-area-left) - var(--loaf-safe-area-right) -
+							var(--loaf-popup-padding) - var(--loaf-popup-padding) - var(--picker-item-gap) -
+							var(--picker-item-gap)
+					) /
+					3
 			),
 			7.5rem
 		);
@@ -82,6 +131,12 @@
 		color: var(--loaf-text);
 	}
 
+	.popup-icon {
+		width: 1.5rem;
+		height: 1.5rem;
+		object-fit: contain;
+	}
+
 	.popup-title {
 		font-size: 1.125rem;
 		line-height: 1.1;
@@ -99,6 +154,12 @@
 		justify-items: center;
 		grid-template-columns: repeat(4, var(--picker-item-size));
 		gap: var(--picker-item-gap);
+	}
+
+	.picker-content {
+		width: 100%;
+		min-height: 0;
+		overflow-y: auto;
 	}
 
 	.three-columns .picker-body {
@@ -123,5 +184,4 @@
 			max-width: calc(var(--picker-item-area) * 3);
 		}
 	}
-
 </style>

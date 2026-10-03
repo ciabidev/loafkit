@@ -102,3 +102,5 @@ registerFlavors(myCustomFlavors);
 ```
 
 then import this module in the consuming app's root layout to register everything at startup.
+call `initializeFlavors({ defaultFlavor: 'midnight' })` after registration to select the default.
+add `storageKey: 'my-app-flavor'` if you want the choice saved in localStorage.

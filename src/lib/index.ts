@@ -25,7 +25,17 @@ export { default as NavbarLogo } from './components/nav/NavbarLogo.svelte';
 export { default as NavTab } from './components/nav/NavTab.svelte';
 
 export { default as DialogHolder } from './components/dialog/DialogHolder.svelte';
+export { default as DialogContainer } from './components/dialog/DialogContainer.svelte';
+export { default as SmallDialogView } from './components/dialog/SmallDialog.svelte';
+export { default as PickerDialogView } from './components/dialog/PickerDialog.svelte';
 export { createDialog, killDialog } from './state/dialogs.js';
+export {
+	getEmotion,
+	listEmotions,
+	registerEmotion,
+	registerEmotions,
+	unregisterEmotion
+} from './state/emotion-registry.js';
 export {
 	applyFlavor,
 	getFlavor,
@@ -35,6 +45,7 @@ export {
 	unregisterFlavor
 } from './state/flavor-registry.js';
 export { flavor, flavorType } from './state/flavors.js';
+export { initializeFlavors } from './state/flavors.js';
 export { flavorPickerVisible, openFlavorPicker } from './state/flavor-picker-visibility.js';
 
 export type { CarouselItemType } from './types/carousel.js';
@@ -46,6 +57,6 @@ export type {
 	SmallDialog,
 	SmallDialogIcons
 } from './types/dialog.js';
-export type { Emotion } from './types/emoticon.js';
+export type { Emotion, EmotionDefinition } from './types/emoticon.js';
 export type { FlavorDefinition } from './types/flavor-definition.js';
 export type { Tag } from './types/tag.js';

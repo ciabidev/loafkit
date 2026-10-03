@@ -1,6 +1,6 @@
 <script lang="ts">
 	import CarouselItem from './CarouselItem.svelte';
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import RightArrow from '../icons/arrow-right.svelte';
 	import LeftArrow from '../icons/arrow-left.svelte';
 	import type { CarouselItemType } from '../../types/carousel.js';
@@ -37,6 +37,13 @@
 		showLeftScroll = carousel.scrollLeft > 1;
 		showRightScroll = carousel.scrollLeft < maxPos;
 	};
+
+	$effect(() => {
+		const itemCount = items.length;
+		tick().then(() => {
+			if (carousel && itemCount === items.length) updateScrollState();
+		});
+	});
 
 	const scroll = (direction: 'left' | 'right') => {
 		const currentPos = carousel.scrollLeft;

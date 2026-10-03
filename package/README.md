@@ -129,23 +129,96 @@ registerFlavor({
 `registerFlavor` stores a copy of the definition. use `getFlavor` or `listFlavors` to inspect
 registered flavors, `applyFlavor` to apply one to the document root, and `unregisterFlavor` to
 clean one up. returned definitions are copies, so you can't accidentally mutate the registry.
+the flavor picker updates when you register or remove flavors.
 
 ### saving/loading flavors
 
-Loafkit UI does save flavors but does not automatically load them. to load flavors on start, add this js snippet near the root of your app:
+register your flavors, then choose the default near the root of your app:
 
-```js
-try {
-	const f = localStorage.getItem('flavor') || 'none'; // or whatever fallback flavor u want;
-	const t = localStorage.getItem('flavorType');
-	if (f) document.documentElement.setAttribute('data-flavor', f);
-	if (t) document.documentElement.setAttribute('data-flavor-type', t);
-} catch (e) {
-	// ignore localStorage errors (e.g., in private mode)
-}
+```ts
+import { initializeFlavors } from '@ciabi/loafkit-ui';
+
+initializeFlavors({ defaultFlavor: 'warm toast', storageKey: 'my-app-flavor' });
 ```
 
-we are thinking of adding support for custom flavor loading later but for now u gotta do this gimmicky fix lol
+leave out `storageKey` if you don't want to save the choice. Loafkit UI doesn't choose a flavor or
+storage key for your app. saved names that aren't registered fall back to your default. switching
+flavors also clears CSS variables that only belonged to the previous flavor.
+
+## emotions
+
+emotions work like flavors: register the names your app uses, then pass a name to `Emoticon` or a
+dialog's `emoticon` prop. Loafkit UI doesn't register any names for you.
+
+```ts
+import { registerEmotions } from '@ciabi/loafkit-ui';
+import SleepyIcon from './sleepy-icon.svelte';
+
+registerEmotions([
+	{ name: 'happy', src: '/emotions/happy.png' },
+	{ name: 'sleepy', Component: SleepyIcon }
+]);
+```
+
+use `registerEmotion`, `getEmotion`, `listEmotions`, and `unregisterEmotion` to manage them one at
+a time. registering a name again replaces its image or component. `Emoticon` also accepts `src`
+or `Component` directly if you don't need a registered name. this repo keeps its example PNGs in
+`src/lib/assets/emotions` and registers them in the gallery app.
+
+## dialogs
+
+render `DialogHolder` once near your app root to use `createDialog` anywhere. dialogs accept your
+own image paths or Svelte components for their visuals:
+
+```ts
+import { createDialog } from '@ciabi/loafkit-ui';
+import TrashIcon from './trash-icon.svelte';
+
+createDialog({
+	id: 'delete-item',
+	type: 'small',
+	title: 'delete item?',
+	Icon: TrashIcon,
+	illustrationSrc: '/mascot/worried.png',
+	buttons: [{ text: 'cancel' }, { text: 'delete', color: 'red', main: true, action: deleteItem }]
+});
+```
+
+`iconSrc` and `illustrationSrc` accept paths instead. `emoticon` accepts a registered emotion name.
+picker dialogs accept `title`, `description`, and an `Icon` or `iconSrc`; each item can also provide
+its own `Icon` or `iconSrc`. `DialogButton.action` and `DialogButton.main` are optional.
+
+for forms or custom markup, render `SmallDialogView` or `PickerDialogView` directly. put components
+inside the dialog tags like any other Svelte component. `SmallDialogView` uses direct children as
+its body; `PickerDialogView` puts them above its items. the `buttons` prop handles closing after an
+action. bind `close` when a button inside direct content needs to close the dialog:
+
+```svelte
+<script lang="ts">
+	import { SmallDialogView } from '@ciabi/loafkit-ui';
+
+	let open = $state(false);
+	let close = $state<() => void>(() => {});
+</script>
+
+<button onclick={() => (open = true)}>about this mood</button>
+{#if open}
+	<SmallDialogView
+		id="mood-details"
+		title="about this mood"
+		emoticon="happy"
+		bind:close
+		onClose={() => (open = false)}
+	>
+		<p>the happy emotion was registered above.</p>
+		<button type="button" onclick={close}>close</button>
+	</SmallDialogView>
+{/if}
+```
+
+use named snippets only when replacing a specific part, such as `footer`, `iconContent`,
+`illustrationContent`, or `itemContent`. `footer(close)` receives a close function if a custom
+footer button needs it. `DialogContainer` is available for a different dialog layout.
 
 ## supported public API
 
@@ -153,10 +226,11 @@ we are thinking of adding support for custom flavor loading later but for now u 
 - Navigation: `FlavorPicker`, `Navbar`, `NavbarLogo`, `NavTab`
 - Inputs: `Carousel`, `Input`, `Selector`, `Switcher`, `Toggle`, `URLButton`
 - Content: `Card`, `Codeblock`, `Contact`, `Emoticon`, `FormField`, `Markdown`, `Popover`, `Profile`, `Tags`
-- Dialogs: `DialogHolder`, `createDialog`, `killDialog`
-- Flavors: `registerFlavor`, `registerFlavors`, `getFlavor`, `listFlavors`, `applyFlavor`, `unregisterFlavor`, `flavor`, `flavorType`
+- Dialogs: `DialogHolder`, `DialogContainer`, `SmallDialogView`, `PickerDialogView`, `createDialog`, `killDialog`
+- Emotions: `registerEmotion`, `registerEmotions`, `getEmotion`, `listEmotions`, `unregisterEmotion`
+- Flavors: `registerFlavor`, `registerFlavors`, `getFlavor`, `listFlavors`, `applyFlavor`, `unregisterFlavor`, `initializeFlavors`, `flavor`, `flavorType`
 - Flavor picker state: `flavorPickerVisible`, `openFlavorPicker`
-- Public prop/configuration types: `CarouselItemType`, `DialogButton`, `DialogInfo`, `DialogPickerItem`, `PickerDialog`, `SmallDialog`, `SmallDialogIcons`, `Emotion`, `FlavorDefinition`, `Tag`
+- Public prop/configuration types: `CarouselItemType`, `DialogButton`, `DialogInfo`, `DialogPickerItem`, `PickerDialog`, `SmallDialog`, `SmallDialogIcons`, `Emotion`, `EmotionDefinition`, `FlavorDefinition`, `Tag`
 
 only package-root exports and the documented stylesheet subpaths are supported. files below `dist/`
 are implementation details, so don't import them directly.

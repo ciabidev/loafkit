@@ -6,12 +6,28 @@
 		id,
 		title,
 		description,
+		class: className = '',
+		style,
 		children
-	}: { expanded: boolean; id: string; title?: string; description?: string; children: Snippet } =
-		$props();
+	}: {
+		expanded: boolean;
+		id: string;
+		title?: string;
+		description?: string;
+		class?: string;
+		style?: string;
+		children: Snippet;
+	} = $props();
 </script>
 
-<div id={id + '-popover'} class="popover-container" aria-hidden={!expanded} class:expanded>
+<div
+	id={id + '-popover'}
+	class="popover-container {className}"
+	{style}
+	aria-hidden={!expanded}
+	inert={!expanded}
+	class:expanded
+>
 	<div id={id + '-header'} class="popover-header">
 		{#if title}
 			<h3>{title}</h3>

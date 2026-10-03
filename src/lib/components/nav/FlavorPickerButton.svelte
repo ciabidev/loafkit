@@ -1,11 +1,24 @@
 <script lang="ts">
+	import type { Component } from 'svelte';
 	import { flavorPickerVisible } from '../../state/flavor-picker-visibility.js';
 	import IceCream from '../icons/ice-cream.svelte';
+	let { Icon, iconSrc }: { Icon?: Component; iconSrc?: string } = $props();
 </script>
 
-<button id="flavor-picker-button" onclick={() => ($flavorPickerVisible = !$flavorPickerVisible)}>
+<button
+	id="flavor-picker-button"
+	type="button"
+	aria-label="choose a flavor"
+	onclick={() => ($flavorPickerVisible = !$flavorPickerVisible)}
+>
 	<div class="icon-holder">
-		<IceCream />
+		{#if Icon}
+			<Icon />
+		{:else if iconSrc}
+			<img src={iconSrc} alt="" />
+		{:else}
+			<IceCream />
+		{/if}
 	</div>
 </button>
 
@@ -39,5 +52,10 @@
 		background: var(--loaf-surface-secondary);
 		border-radius: 50%;
 		pointer-events: all;
+	}
+	.icon-holder img {
+		width: 100%;
+		height: 100%;
+		object-fit: contain;
 	}
 </style>

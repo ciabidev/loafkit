@@ -1,6 +1,9 @@
+import { writable } from 'svelte/store';
 import type { FlavorDefinition } from '../types/flavor-definition.js';
 
 const flavors = new Map<string, FlavorDefinition>();
+const appliedVariables = new Set<string>();
+export const flavorDefinitions = writable<FlavorDefinition[]>([]);
 
 function copyFlavor(definition: FlavorDefinition): FlavorDefinition {
 	return {
@@ -19,6 +22,7 @@ export function registerFlavor(definition: FlavorDefinition): void {
 	}
 
 	flavors.set(definition.name, copyFlavor(definition));
+	flavorDefinitions.set(listFlavors());
 
 	// If this flavor is already selected via persisted data, apply it now.
 	const root = typeof document !== 'undefined' ? document.documentElement : null;
@@ -43,7 +47,9 @@ export function getFlavor(name: string): FlavorDefinition | undefined {
 }
 
 export function unregisterFlavor(name: string): boolean {
-	return flavors.delete(name);
+	const removed = flavors.delete(name);
+	if (removed) flavorDefinitions.set(listFlavors());
+	return removed;
 }
 
 export function applyFlavor(name: string): boolean {
@@ -53,8 +59,13 @@ export function applyFlavor(name: string): boolean {
 	const root = typeof document !== 'undefined' ? document.documentElement : null;
 	if (!root) return false;
 
+	for (const key of appliedVariables) {
+		if (!(key in definition.cssVariables)) root.style.removeProperty(key);
+	}
+	appliedVariables.clear();
 	for (const [key, value] of Object.entries(definition.cssVariables)) {
 		root.style.setProperty(key, value);
+		appliedVariables.add(key);
 	}
 
 	root.setAttribute('data-flavor', name);

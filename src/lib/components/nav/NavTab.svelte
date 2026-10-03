@@ -8,9 +8,24 @@
 		layout?: 'vertical' | 'horizontal';
 		iconColor?: string;
 		active?: boolean;
+		class?: string;
+		style?: string;
+		target?: string;
+		rel?: string;
 	}
 
-	let { Icon, path, name, layout, iconColor, active = false }: Props = $props();
+	let {
+		Icon,
+		path,
+		name,
+		layout,
+		iconColor,
+		active = false,
+		class: className = '',
+		style,
+		target,
+		rel
+	}: Props = $props();
 	let tab!: HTMLElement;
 
 	const scrollToTab = (ele: HTMLElement) => {
@@ -45,11 +60,13 @@
 	id="tab"
 	draggable="false"
 	class:active
-	class:navbar-tab={true}
+	class="navbar-tab {className}"
 	href={path}
+	{target}
+	{rel}
 	aria-selected={active}
 	class:horizontal={layout === 'horizontal'}
-	style:--icon-color={iconColor ?? 'currentColor'}
+	style="--icon-color: {iconColor ?? 'currentColor'}; {style ?? ''}"
 	bind:this={tab}
 >
 	{#if Icon}

@@ -1,13 +1,15 @@
 <script lang="ts">
+	import type { Snippet } from 'svelte';
 	import type { DialogPickerItem } from '../../types/dialog.js';
 
 	type Props = {
 		item: DialogPickerItem;
 		number: number;
 		onSelect?: (item: DialogPickerItem) => void;
+		itemContent?: Snippet<[DialogPickerItem, number]>;
 	};
 
-	const { item, number, onSelect }: Props = $props();
+	const { item, number, onSelect, itemContent }: Props = $props();
 
 	const itemType = $derived(item.type ?? 'photo');
 
@@ -20,37 +22,51 @@
 
 <button
 	class="picker-item"
+	type="button"
+	aria-label={item.text ?? `${itemType} ${number}`}
 	onclick={() => {
 		if (onSelect) {
 			onSelect(item);
 		}
 	}}
 >
-	<div class="picker-type">
-		{#if itemType === 'video'}
-			🎥
-		{:else if itemType === 'gif'}
-			🎞️
-		{:else}
-			📷
-		{/if}
-	</div>
-
-	<img
-		class="picker-image"
-		src={item.thumb ?? item.url}
-		class:loading={!imageLoaded}
-		class:video-thumbnail={['video', 'gif'].includes(itemType)}
-		onload={loaded}
-		alt="{itemType} {number}"
-	/>
-	{#if item.text}
-		<div class="picker-text absolute">
-			{item.text}
+	{#if itemContent}
+		{@render itemContent(item, number)}
+	{:else}
+		<div class="picker-type" aria-hidden="true">
+			{#if item.Icon}
+				<item.Icon />
+			{:else if item.iconSrc}
+				<img src={item.iconSrc} alt="" />
+			{:else if itemType === 'video'}
+				🎥
+			{:else if itemType === 'gif'}
+				🎞️
+			{:else}
+				📷
+			{/if}
 		</div>
-	{/if}
-	{#if !imageLoaded}
-		<div class="skeleton"></div>
+
+		{#if item.url}
+			<img
+				class="picker-image"
+				src={item.thumb ?? item.url}
+				class:loading={!imageLoaded}
+				class:video-thumbnail={['video', 'gif'].includes(itemType)}
+				onload={loaded}
+				alt="{itemType} {number}"
+			/>
+		{:else}
+			<div class="picker-placeholder">{item.text ?? `option ${number}`}</div>
+		{/if}
+		{#if item.text}
+			<div class="picker-text absolute">
+				{item.text}
+			</div>
+		{/if}
+		{#if item.url && !imageLoaded}
+			<div class="skeleton"></div>
+		{/if}
 	{/if}
 </button>
 
@@ -135,6 +151,22 @@
 
 		pointer-events: none;
 		font-size: 0.75rem;
+	}
+
+	.picker-type :global(img) {
+		width: 1rem;
+		height: 1rem;
+		object-fit: contain;
+	}
+
+	.picker-placeholder {
+		display: grid;
+		place-items: center;
+		width: 100%;
+		height: 100%;
+		padding: 1rem;
+		background: var(--loaf-surface-secondary);
+		color: var(--loaf-text);
 	}
 
 	.picker-text {

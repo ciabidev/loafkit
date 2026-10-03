@@ -12,8 +12,26 @@
 
 	import FlavorPicker from '$components/nav/FlavorPicker.svelte';
 	import { registerFlavor, registerFlavors } from '$lib/state/flavor-registry';
+	import { registerEmotions } from '$lib/state/emotion-registry';
+	import { initializeFlavors } from '$lib/state/flavors';
 
-	registerFlavor({
+	const emotionImages = import.meta.glob<string>('../lib/assets/emotions/*.png', {
+		eager: true,
+		query: '?url',
+		import: 'default'
+	});
+	registerEmotions(
+		Object.entries(emotionImages).map(([path, src]) => ({
+			name:
+				path
+					.split('/')
+					.pop()
+					?.replace(/\.png$/, '') ?? path,
+			src
+		}))
+	); // example emotions
+
+	registerFlavor({ // example flavors
 		name: 'Mocha Blue',
 		description: 'catppuccin mocha with blue accents',
 		iconPath: '/flavor_icons/catppuccin-mocha-blue.png',
@@ -142,6 +160,8 @@
 			}
 		}
 	]);
+
+	initializeFlavors({ defaultFlavor: 'rain', storageKey: 'flavor' });
 </script>
 
 <svelte:head>
@@ -157,7 +177,11 @@
 
 <!-- acts as a "body" tag that we have more control over. Example: when a mobile user reaches end of scroll. then the page starts scrolling to make typing and scrolling easier -->
 <Basket>
-	<FlavorPicker />
+	<FlavorPicker
+		title="site flavors"
+		description="pick your favorite"
+		buttonIconSrc="/favicon/favicon.svg"
+	/>
 	<DialogHolder />
 
 	<Loaf>
