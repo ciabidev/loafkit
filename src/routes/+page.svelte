@@ -96,6 +96,14 @@
 	let cardClicks = $state(0);
 	let episodePlaying = $state(false);
 	let selectedPickerItem = $state('None');
+	let galleryNavbarVisible = $state(true);
+	$effect(() => {
+		if (typeof window !== 'undefined') {
+			window.dispatchEvent(
+				new CustomEvent('loaf-gallery-navbar-toggle', { detail: galleryNavbarVisible })
+			);
+		}
+	});
 	const markdownExample =
 		'## markdown example\nthis component renders **formatted text**, links, and lists.\n- one\n- two\n- three\n\nspacing stays consistent after a list, too.';
 	const codeExample = '<Card variant="elevated">\n  Hello from a card\n</Card>';
@@ -723,6 +731,10 @@
 			</SmallDialogView>
 		{/if}
 		<div class="nav-previews">
+			<label
+				><input type="checkbox" bind:checked={galleryNavbarVisible} /> show app navbar (actual Basket/Loaf
+				layout)</label
+			>
 			<div class="scrollable-nav-preview">
 				<Navbar test position="bottom" style="border-radius: var(--loaf-radius-md);">
 					<NavTab name="gallery" Icon={GridIcon} path="/" active />
@@ -730,17 +742,18 @@
 					<NavTab name="a very long test route" Icon={LinkIcon} path="/test3" />
 				</Navbar>
 			</div>
-				<Navbar test position="left" style="border-radius: var(--loaf-radius-md);">
-					<NavbarLogo src="/icons/biology.jpg" alt="Ciabi logo" />
-					<NavTab name="gallery" Icon={GridIcon} path="/" active />
-					<NavTab name="test route" Icon={LinkIcon} path="/test2" />
-					<NavTab name="a very long test route" Icon={LinkIcon} path="/test3" />
-				</Navbar>
+			<Navbar test position="left" style="border-radius: var(--loaf-radius-md);">
+				<NavbarLogo src="/icons/biology.jpg" alt="Ciabi logo" />
+				<NavTab name="gallery" Icon={GridIcon} path="/" active />
+				<NavTab name="test route" Icon={LinkIcon} path="/test2" />
+				<NavTab name="a very long test route" Icon={LinkIcon} path="/test3" />
+			</Navbar>
 		</div>
 
 		<div class="section-heading paragraph-text">
 			<h3>responsive side positions</h3>
 			<p>resize below 600px to see each side navbar move to its named edge.</p>
+			<p>Toggle the app navbar above to compare the real full-height layout without a navbar.</p>
 		</div>
 		<div class="responsive-nav-grid">
 			{#each responsiveNavbarPositions as position (position)}
@@ -1029,7 +1042,6 @@
 	.nav-previews {
 		align-items: stretch;
 	}
-
 
 	.scrollable-nav-preview {
 		width: min(100%, 18rem);

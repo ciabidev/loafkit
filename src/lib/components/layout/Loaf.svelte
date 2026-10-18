@@ -13,7 +13,7 @@
 <style>
 	#loaf-wrapper {
 		width: 100%;
-		height: calc(100% - var(--loaf-navbar-height));
+		height: 100%;
 		overflow: hidden;
 		background-color: var(--loaf-surface);
 		border-radius: 0;
@@ -22,6 +22,7 @@
 	}
 
 	:global(#basket:has(> .navbar[data-position='top']:not(.test))) #loaf-wrapper {
+		height: calc(100% - var(--loaf-navbar-height));
 		margin-top: var(--loaf-navbar-height);
 		border-radius: calc(var(--loaf-radius-md) * 2) calc(var(--loaf-radius-md) * 2) 0 0;
 	}

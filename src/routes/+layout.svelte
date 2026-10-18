@@ -14,6 +14,15 @@
 	import { registerFlavor, registerFlavors } from '$lib/state/flavor-registry';
 	import { registerEmotions } from '$lib/state/emotion-registry';
 	import { initializeFlavors } from '$lib/state/flavors';
+	import { onMount } from 'svelte';
+	let showNavbar = $state(true);
+	onMount(() => {
+		const updateGalleryNavbar = (event: Event) => {
+			if (page.url.pathname === '/') showNavbar = (event as CustomEvent<boolean>).detail;
+		};
+		window.addEventListener('loaf-gallery-navbar-toggle', updateGalleryNavbar);
+		return () => window.removeEventListener('loaf-gallery-navbar-toggle', updateGalleryNavbar);
+	});
 
 	const emotionImages = import.meta.glob<string>('../lib/assets/emotions/*.png', {
 		eager: true,
@@ -31,7 +40,8 @@
 		}))
 	); // example emotions
 
-	registerFlavor({ // example flavors
+	registerFlavor({
+		// example flavors
 		name: 'Mocha Blue',
 		description: 'catppuccin mocha with blue accents',
 		iconPath: '/flavor_icons/catppuccin-mocha-blue.png',
@@ -188,8 +198,10 @@
 		{@render children()}
 	</Loaf>
 
-	<Navbar position="left-bottom">
-		<NavTab name="gallery" Icon={MacroIcon} path="/" active={page.url.pathname === '/'} />
-		<NavTab name="404" Icon={MacroIcon} path="/404" active={page.status === 404} />
-	</Navbar>
+	{#if showNavbar || page.url.pathname !== '/'}
+		<Navbar position="left-bottom">
+			<NavTab name="gallery" Icon={MacroIcon} path="/" active={page.url.pathname === '/'} />
+			<NavTab name="404" Icon={MacroIcon} path="/404" active={page.status === 404} />
+		</Navbar>
+	{/if}
 </Basket>
