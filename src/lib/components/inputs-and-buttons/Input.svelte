@@ -3,7 +3,6 @@
 	let {
 		placeholder,
 		value = $bindable(''),
-		description = null,
 		Icon = null,
 		width = '100%',
 		min_width = '100%',
@@ -19,6 +18,7 @@
 		maxLength = undefined,
 		ariaLabel = undefined,
 		ariaDescribedBy = undefined,
+		ariaInvalid = undefined,
 		class: className = '',
 		style = undefined
 	} = $props();
@@ -53,6 +53,7 @@
 			maxlength={maxLength}
 			aria-label={ariaLabel}
 			aria-describedby={ariaDescribedBy}
+			aria-invalid={ariaInvalid}
 			rows="4"
 		></textarea>
 	{:else}
@@ -74,13 +75,10 @@
 			maxlength={maxLength}
 			aria-label={ariaLabel}
 			aria-describedby={ariaDescribedBy}
+			aria-invalid={ariaInvalid}
 		/>
 	{/if}
 </div>
-{#if description}
-	<div class="subtext">{description}</div>
-{/if}
-
 <style>
 	.input-wrapper {
 		border: var(--loaf-border-color) 0.125rem solid;
@@ -107,6 +105,10 @@
 	.input-wrapper.focused {
 		border: var(--loaf-accent) 2px solid;
 		box-shadow: 0px 0px 0px 3px color-mix(in srgb, var(--loaf-accent) 30%, transparent);
+	}
+
+	.input-wrapper:has(.input[aria-invalid='true']) {
+		border-color: var(--loaf-error);
 	}
 
 	.input {

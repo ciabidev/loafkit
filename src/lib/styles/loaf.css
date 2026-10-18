@@ -393,3 +393,7 @@ svg {
 		--loaf-navbar-font-size: 0.8125rem;
 	}
 }
+
+code {
+	background-color: var(--loaf-code-bg);
+}

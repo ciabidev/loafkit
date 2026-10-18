@@ -16,6 +16,9 @@
 		selected?: string;
 		onSelect?: (value: string) => void;
 		id?: string;
+		ariaLabel?: string;
+		ariaDescribedBy?: string;
+		invalid?: boolean;
 	}
 
 	let {
@@ -25,10 +28,15 @@
 		full = true,
 		selected = $bindable(''),
 		onSelect,
-		id
+		id,
+		ariaLabel,
+		ariaDescribedBy,
+		invalid = false
 	}: Props = $props();
 
 	let isOpen = $state(false);
+	const uniqueId = $props.id();
+	const listboxId = `${uniqueId}-listbox`;
 	let opensUpward = $state(false);
 	let selectorWrapper = $state<HTMLDivElement>();
 	let optionsMenu = $state<HTMLUListElement>();
@@ -84,8 +92,12 @@
 		class="selector-button"
 		class:locked
 		disabled={locked}
+		aria-label={ariaLabel}
+		aria-describedby={ariaDescribedBy}
+		data-invalid={invalid || undefined}
 		aria-haspopup="listbox"
 		aria-expanded={isOpen}
+		aria-controls={isOpen ? listboxId : undefined}
 		onclick={toggleMenu}
 	>
 		{#if title}
@@ -101,6 +113,7 @@
 
 	{#if isOpen}
 		<ul
+			id={listboxId}
 			bind:this={optionsMenu}
 			class={opensUpward ? 'options-menu options-menu--open-up' : 'options-menu'}
 			role="listbox"
@@ -141,6 +154,10 @@
 
 	.selector-button:active {
 		transform: none;
+	}
+
+	.selector-button[data-invalid='true'] {
+		border-color: var(--loaf-error);
 	}
 
 	.selector-wrapper.full {

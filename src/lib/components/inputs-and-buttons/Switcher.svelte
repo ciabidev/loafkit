@@ -5,11 +5,30 @@
 	let {
 		children,
 		full = false,
-		description = ''
-	}: { children?: Snippet; full?: boolean; description?: string } = $props();
+		description = '',
+		id,
+		ariaLabel,
+		ariaLabelledBy,
+		ariaDescribedBy,
+		invalid = false
+	}: {
+		children?: Snippet;
+		full?: boolean;
+		description?: string;
+		id?: string;
+		ariaLabel?: string;
+		ariaLabelledBy?: string;
+		ariaDescribedBy?: string;
+		invalid?: boolean;
+	} = $props();
 
 	let switcherElement: HTMLDivElement;
 	let highlightElement: HTMLDivElement;
+	const uniqueId = $props.id();
+	const descriptionId = `${uniqueId}-description`;
+	let describedBy = $derived(
+		[ariaDescribedBy, description ? descriptionId : undefined].filter(Boolean).join(' ') || undefined
+	);
 
 	onMount(() => {
 		let frame = 0;
@@ -57,14 +76,24 @@
 </script>
 
 <div class="switcher-parent">
-	<div class="switcher" class:full bind:this={switcherElement}>
+	<div
+		{id}
+		class="switcher"
+		class:full
+		role={ariaLabel || ariaLabelledBy ? 'group' : undefined}
+		aria-label={ariaLabel}
+		aria-labelledby={ariaLabelledBy}
+		aria-describedby={describedBy}
+		data-invalid={invalid || undefined}
+		bind:this={switcherElement}
+	>
 		<div class="highlight" bind:this={highlightElement} aria-hidden="true"></div>
 		{#if children}
 			{@render children()}
 		{/if}
 	</div>
 	{#if description}
-		<div class="subtext">{description}</div>
+		<div class="subtext" id={descriptionId}>{description}</div>
 	{/if}
 </div>
 
@@ -102,6 +131,10 @@
 		box-shadow: var(--loaf-shadow-md);
 		padding: var(--loaf-switcher-padding);
 		gap: calc(var(--loaf-switcher-padding) - 0.0938rem);
+	}
+
+	.switcher[data-invalid='true'] {
+		border-color: var(--loaf-error);
 	}
 
 	.switcher :global(button.active) {

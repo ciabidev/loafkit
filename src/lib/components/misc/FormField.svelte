@@ -1,5 +1,8 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import Field from './field.svelte';
+	import FieldLabel from './field-label.svelte';
+	import FieldDescription from './field-description.svelte';
 
 	interface Props {
 		label: string;
@@ -14,38 +17,22 @@
 	let { label, id, hint, long, required, value, children }: Props = $props();
 </script>
 
-<div class="field">
+<Field>
 	{#if label}
-		<label for={id}>{label}</label>
+		<FieldLabel htmlFor={id}>{label}</FieldLabel>
 	{/if}
 	{#if required && !value.trim()}
 		<div class="required-text">required</div>
 	{/if}
 	{#if hint}
-		<div class="hint">{hint}</div>
+		<FieldDescription>{hint}</FieldDescription>
 	{/if}
 	<div class="input-wrapper" class:long>
 		{@render children()}
 	</div>
-</div>
+</Field>
 
 <style>
-	.field {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-	}
-
-	label {
-		font-weight: bold;
-	}
-
-	.hint {
-		margin: 0;
-		font-size: 0.9rem;
-		color: var(--loaf-text-muted, #666);
-	}
-
 	.input-wrapper {
 		width: 100%;
 	}

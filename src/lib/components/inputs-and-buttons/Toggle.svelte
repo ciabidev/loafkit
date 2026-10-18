@@ -4,6 +4,10 @@
 		title?: string;
 		locked?: boolean;
 		full?: boolean;
+		id?: string;
+		ariaLabel?: string;
+		ariaDescribedBy?: string;
+		ariaInvalid?: boolean;
 		onClick?: (
 			event: MouseEvent & { currentTarget: EventTarget & HTMLButtonElement }
 		) => void | Promise<void>;
@@ -14,15 +18,25 @@
 		title = '',
 		locked = false,
 		full = false,
+		id,
+		ariaLabel,
+		ariaDescribedBy,
+		ariaInvalid,
 		onClick = async () => {}
 	}: Props = $props();
 </script>
 
 <button
+	{id}
+	type="button"
 	class="button toggle-container"
 	class:transparent={!title}
 	role="switch"
 	aria-checked={enabled}
+	aria-label={ariaLabel}
+	aria-describedby={ariaDescribedBy}
+	aria-invalid={ariaInvalid}
+	disabled={locked}
 	onclick={onClick}
 	class:full
 	class:locked
@@ -54,6 +68,10 @@
 
 	.toggle-container.full {
 		width: 100%;
+	}
+
+	.toggle-container[aria-invalid='true'] {
+		border-color: var(--loaf-error);
 	}
 
 	.toggle {

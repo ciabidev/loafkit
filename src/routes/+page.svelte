@@ -15,7 +15,9 @@
 	import Codeblock from '$components/misc/Codeblock.svelte';
 	import Contact from '$components/misc/Contact.svelte';
 	import Emoticon from '$components/misc/Emoticon.svelte';
-	import FormField from '$components/misc/FormField.svelte';
+	import Field from '$components/misc/field.svelte';
+	import FieldLabel from '$components/misc/field-label.svelte';
+	import FieldDescription from '$components/misc/field-description.svelte';
 	import Markdown from '$components/misc/Markdown.svelte';
 	import PageContainer from '$components/misc/PageContainer.svelte';
 	import Popover from '$components/misc/Popover.svelte';
@@ -27,7 +29,8 @@
 	import { createDialog } from '$lib/state/dialogs';
 	import SmallDialogView from '$components/dialog/SmallDialog.svelte';
 	import PickerDialogView from '$components/dialog/PickerDialog.svelte';
-	import { flavorDefinitions, registerFlavor } from '$lib/state/flavor-registry';
+	import { flavorDefinitions, getFlavor, registerFlavor } from '$lib/state/flavor-registry';
+	import { flavor } from '$lib/state/flavors';
 	import { emotionDefinitions, registerEmotion } from '$lib/state/emotion-registry';
 	type CardVariant = 'flat' | 'bordered' | 'elevated' | 'ghost';
 
@@ -44,6 +47,7 @@
 		'right-top',
 		'right-bottom'
 	] as const;
+	const isHexColor = (value: string) => /^#(?:[0-9a-f]{6}|[0-9a-f]{8})$/i.test(value.trim());
 
 	const flavorItems = $derived(
 		$flavorDefinitions.map((definition) => ({
@@ -54,11 +58,16 @@
 	);
 
 	let textInput = $state('');
+	let fieldSubmitted = $state(false);
+	let textInputInvalid = $derived(fieldSubmitted && !textInput.trim());
 	let longInput = $state('');
-	let activeSegment = $state(0);
+	let activeSegment = $state(-1);
 	let fullActiveSegment = $state(0);
-	let selectedOption = $state('second');
+	let selectedOption = $state('');
 	let toggleEnabled = $state(false);
+	let selectorInvalid = $derived(fieldSubmitted && !selectedOption);
+	let toggleInvalid = $derived(fieldSubmitted && !toggleEnabled);
+	let switcherInvalid = $derived(fieldSubmitted && activeSegment === -1);
 	let lockedToggle = $state(false);
 	let popoverVisible = $state(false);
 	let composedDialogVisible = $state(false);
@@ -66,7 +75,23 @@
 	let closeComposedDialog = $state<() => void>(() => {});
 	let closeCustomPicker = $state<() => void>(() => {});
 	let dialogInput = $state('');
-	let galleryFlavorAdded = $state(false);
+	let flavorFormVisible = $state(false);
+	let closeFlavorDialog = $state<() => void>(() => {});
+	let flavorSubmitted = $state(false);
+	let flavorName = $state('');
+	let flavorDescription = $state('');
+	let flavorIconPath = $state('');
+	let flavorMode = $state('');
+	let flavorColorKeys = $state<string[]>([]);
+	let flavorColors = $state<Record<string, string>>({});
+	let flavorNameInvalid = $derived(
+		flavorSubmitted &&
+			(!flavorName.trim() ||
+				$flavorDefinitions.some(
+					(definition) => definition.name.toLowerCase() === flavorName.trim().toLowerCase()
+				))
+	);
+	let flavorModeInvalid = $derived(flavorSubmitted && !flavorMode);
 	let galleryEmotionAdded = $state(false);
 	let cardClicks = $state(0);
 	let episodePlaying = $state(false);
@@ -121,15 +146,49 @@
 		});
 	};
 
-	const addGalleryFlavor = () => {
+	const openGalleryFlavorForm = () => {
+		const currentFlavor = getFlavor($flavor);
+		flavorColorKeys = Object.entries(currentFlavor?.cssVariables ?? {})
+			.filter(([, value]) => isHexColor(value))
+			.map(([key]) => key);
+		flavorName = '';
+		flavorDescription = '';
+		flavorIconPath = '';
+		flavorMode = '';
+		flavorColors = Object.fromEntries(
+			flavorColorKeys.map((key) => [key, currentFlavor?.cssVariables[key] ?? ''])
+		);
+		flavorSubmitted = false;
+		flavorFormVisible = true;
+	};
+
+	const addGalleryFlavor = (event: SubmitEvent) => {
+		event.preventDefault();
+		flavorSubmitted = true;
+		const name = flavorName.trim();
+		if (
+			!name ||
+			flavorColorKeys.length === 0 ||
+			$flavorDefinitions.some(
+				(definition) => definition.name.toLowerCase() === name.toLowerCase()
+			) ||
+			!flavorMode ||
+			flavorColorKeys.some((key) => !isHexColor(flavorColors[key] ?? ''))
+		) {
+			return;
+		}
+
 		registerFlavor({
-			name: 'gallery mint',
-			description: 'registered after the picker mounted',
-			iconPath: '/favicon/favicon-96x96.png',
-			isDark: false,
-			cssVariables: { '--loaf-accent': '#43af73', '--loaf-accent-secondary': '#38885c' }
+			name,
+			description: flavorDescription.trim() || `custom ${flavorMode} flavor`,
+			iconPath: flavorIconPath.trim() || '/favicon/favicon-96x96.png',
+			isDark: flavorMode === 'dark',
+			cssVariables: Object.fromEntries(
+				flavorColorKeys.map((key) => [key, flavorColors[key].trim()])
+			)
 		});
-		galleryFlavorAdded = true;
+		flavor.set(name);
+		closeFlavorDialog();
 	};
 
 	const addGalleryEmotion = () => {
@@ -265,40 +324,73 @@
 		</div>
 		<div class="stack">
 			<p class="subtext">selectors support clicks, Enter/Space, arrow keys, and Escape.</p>
-			<FormField
-				label="text input"
-				id="gallery-text-input"
-				hint="includes an icon and a live description."
-				long={false}
-				required={true}
-				value={textInput}
-			>
+			<Field>
+				<FieldLabel htmlFor="gallery-text-input">text input</FieldLabel>
 				<Input
 					id="gallery-text-input"
 					name="gallery-search"
 					autocomplete="off"
 					required
-					ariaLabel="gallery search input"
+					ariaDescribedBy={textInputInvalid
+						? 'gallery-text-input-description gallery-text-input-error'
+						: 'gallery-text-input-description'}
+					ariaInvalid={textInputInvalid}
 					style="max-width: 28rem"
 					placeholder="type something"
 					Icon={SearchIcon}
 					bind:value={textInput}
-					description={textInput ? `current value: ${textInput}` : null}
 				/>
-			</FormField>
+				<FieldDescription id="gallery-text-input-description">
+					{textInput
+						? `current value: ${textInput}`
+						: 'enter a value to see the description update.'}
+				</FieldDescription>
+				{#if textInputInvalid}
+					<p class="field__error" id="gallery-text-input-error" role="alert">
+						this field is required.
+					</p>
+				{/if}
+				<button type="button" onclick={() => (fieldSubmitted = true)}>validate controls</button>
+			</Field>
 
 			<Input placeholder="enter markdown here" long bind:value={longInput} />
 			<h3 class="paragraph-text">see live markdown rendering below!</h3>
 			<Markdown source={longInput} />
-			<Switcher description="content-width segmented control">
-				<button class:active={activeSegment === 0} onclick={() => (activeSegment = 0)}>first</button
+			<Field>
+				<FieldLabel id="gallery-switcher-label">reading mode</FieldLabel>
+				<Switcher
+					id="gallery-switcher"
+					ariaLabelledBy="gallery-switcher-label"
+					ariaDescribedBy={switcherInvalid
+						? 'gallery-switcher-description gallery-switcher-error'
+						: 'gallery-switcher-description'}
+					invalid={switcherInvalid}
 				>
-				<button class:active={activeSegment === 1} onclick={() => (activeSegment = 1)}
-					>second</button
-				>
-				<button class:active={activeSegment === 2} onclick={() => (activeSegment = 2)}>third</button
-				>
-			</Switcher>
+					<button
+						class:active={activeSegment === 0}
+						aria-pressed={activeSegment === 0}
+						onclick={() => (activeSegment = 0)}>compact</button
+					>
+					<button
+						class:active={activeSegment === 1}
+						aria-pressed={activeSegment === 1}
+						onclick={() => (activeSegment = 1)}>comfortable</button
+					>
+					<button
+						class:active={activeSegment === 2}
+						aria-pressed={activeSegment === 2}
+						onclick={() => (activeSegment = 2)}>spacious</button
+					>
+				</Switcher>
+				<FieldDescription id="gallery-switcher-description">
+					choose the layout for your reading list.
+				</FieldDescription>
+				{#if switcherInvalid}
+					<p class="field__error" id="gallery-switcher-error" role="alert">
+						choose a reading mode.
+					</p>
+				{/if}
+			</Field>
 
 			<Switcher full description="full-width segmented control">
 				<button class:active={fullActiveSegment === 0} onclick={() => (fullActiveSegment = 0)}
@@ -312,16 +404,28 @@
 				>
 			</Switcher>
 
-			<Selector
-				id="gallery-selector"
-				title="selector"
-				options={[
-					{ value: 'first', text: 'first option' },
-					{ value: 'second', text: 'second option' },
-					{ value: 'third', text: 'third option' }
-				]}
-				bind:selected={selectedOption}
-			/>
+			<Field>
+				<FieldLabel htmlFor="gallery-selector">preferred option</FieldLabel>
+				<Selector
+					id="gallery-selector"
+					ariaDescribedBy={selectorInvalid
+						? 'gallery-selector-description gallery-selector-error'
+						: 'gallery-selector-description'}
+					invalid={selectorInvalid}
+					options={[
+						{ value: 'first', text: 'first option' },
+						{ value: 'second', text: 'second option' },
+						{ value: 'third', text: 'third option' }
+					]}
+					bind:selected={selectedOption}
+				/>
+				<FieldDescription id="gallery-selector-description">
+					choose an option before continuing.
+				</FieldDescription>
+				{#if selectorInvalid}
+					<p class="field__error" id="gallery-selector-error" role="alert">choose an option.</p>
+				{/if}
+			</Field>
 			<Selector
 				title="compact selector"
 				full={false}
@@ -333,12 +437,28 @@
 				bind:selected={selectedOption}
 			/>
 			<div class="component-row">
-				<Toggle
-					enabled={toggleEnabled}
-					onClick={() => {
-						toggleEnabled = !toggleEnabled;
-					}}
-				/>
+				<Field>
+					<FieldLabel htmlFor="gallery-toggle">enable backups</FieldLabel>
+					<Toggle
+						id="gallery-toggle"
+						enabled={toggleEnabled}
+						ariaDescribedBy={toggleInvalid
+							? 'gallery-toggle-description gallery-toggle-error'
+							: 'gallery-toggle-description'}
+						ariaInvalid={toggleInvalid}
+						onClick={() => {
+							toggleEnabled = !toggleEnabled;
+						}}
+					/>
+					<FieldDescription id="gallery-toggle-description">
+						turn on backups to use the locked toggle.
+					</FieldDescription>
+					{#if toggleInvalid}
+						<p class="field__error" id="gallery-toggle-error" role="alert">
+							backups must be enabled.
+						</p>
+					{/if}
+				</Field>
 				<Toggle
 					title="labeled toggle"
 					enabled={toggleEnabled}
@@ -473,30 +593,149 @@
 		<div class="section-heading paragraph-text">
 			<h2>navigation</h2>
 		</div>
-		<button type="button" onclick={addGalleryFlavor} disabled={galleryFlavorAdded}>
-			{galleryFlavorAdded ? 'gallery mint added to flavor picker' : 'add a flavor to the picker'}
+		<button type="button" onclick={openGalleryFlavorForm} disabled={flavorFormVisible}>
+			add a flavor to the picker
 		</button>
+
+		{#if flavorFormVisible}
+			<SmallDialogView
+				id="gallery-flavor-form"
+				title="create a flavor"
+				class="gallery-flavor-dialog"
+				leftAligned
+				bind:close={closeFlavorDialog}
+				onClose={() => (flavorFormVisible = false)}
+			>
+				<form id="gallery-flavor-editor" class="flavor-form" onsubmit={addGalleryFlavor} novalidate>
+					<FieldDescription>
+						start with the current flavor's colors, then make each one your own. custom flavors in
+						this gallery last until refresh.
+					</FieldDescription>
+					<Field>
+						<FieldLabel htmlFor="gallery-flavor-name">name</FieldLabel>
+						<Input
+							id="gallery-flavor-name"
+							bind:value={flavorName}
+							placeholder="your flavor name"
+							ariaInvalid={flavorNameInvalid}
+							ariaDescribedBy={flavorNameInvalid
+								? 'gallery-flavor-name-help gallery-flavor-name-error'
+								: 'gallery-flavor-name-help'}
+						/>
+						<FieldDescription id="gallery-flavor-name-help">
+							this name appears in the flavor picker.
+						</FieldDescription>
+						{#if flavorNameInvalid}
+							<p class="field__error" id="gallery-flavor-name-error" role="alert">
+								{flavorName.trim() ? 'choose a name that is not already used.' : 'enter a name.'}
+							</p>
+						{/if}
+					</Field>
+					<Field>
+						<FieldLabel htmlFor="gallery-flavor-mode">appearance</FieldLabel>
+						<Selector
+							id="gallery-flavor-mode"
+							options={[
+								{ value: 'light', text: 'light' },
+								{ value: 'dark', text: 'dark' }
+							]}
+							bind:selected={flavorMode}
+							invalid={flavorModeInvalid}
+							ariaDescribedBy={flavorModeInvalid
+								? 'gallery-flavor-mode-help gallery-flavor-mode-error'
+								: 'gallery-flavor-mode-help'}
+						/>
+						<FieldDescription id="gallery-flavor-mode-help">
+							sets whether the flavor uses light or dark controls.
+						</FieldDescription>
+						{#if flavorModeInvalid}
+							<p class="field__error" id="gallery-flavor-mode-error" role="alert">
+								choose light or dark.
+							</p>
+						{/if}
+					</Field>
+					<Field>
+						<FieldLabel htmlFor="gallery-flavor-description">description (optional)</FieldLabel>
+						<Input
+							id="gallery-flavor-description"
+							bind:value={flavorDescription}
+							placeholder="a short note about your flavor"
+						/>
+					</Field>
+					<Field>
+						<FieldLabel htmlFor="gallery-flavor-icon">icon path (optional)</FieldLabel>
+						<Input
+							id="gallery-flavor-icon"
+							bind:value={flavorIconPath}
+							placeholder="/icons/my-flavor.png"
+							ariaDescribedBy="gallery-flavor-icon-help"
+						/>
+						<FieldDescription id="gallery-flavor-icon-help">
+							uses the gallery logo when blank.
+						</FieldDescription>
+					</Field>
+					<fieldset class="flavor-form__colors">
+						<legend>color variables</legend>
+						<FieldDescription id="gallery-flavor-hex-help">
+							enter a hex color for every variable: #RRGGBB or #RRGGBBAA.
+						</FieldDescription>
+						<div class="flavor-form__color-grid">
+							{#each flavorColorKeys as key (key)}
+								{@const colorInvalid = flavorSubmitted && !isHexColor(flavorColors[key] ?? '')}
+								{@const fieldId = `gallery-flavor-${key.slice(7)}`}
+								<Field>
+									<FieldLabel htmlFor={fieldId}>
+										{key.slice(7).replaceAll('-', ' ')}
+									</FieldLabel>
+									<div class="flavor-form__color-control">
+										<Input
+											id={fieldId}
+											bind:value={flavorColors[key]}
+											min_width="0"
+											placeholder="#RRGGBB"
+											ariaInvalid={colorInvalid}
+											ariaDescribedBy={colorInvalid
+												? `gallery-flavor-hex-help ${fieldId}-error`
+												: 'gallery-flavor-hex-help'}
+										/>
+										<span
+											class="flavor-form__swatch"
+											style:background-color={isHexColor(flavorColors[key] ?? '')
+												? flavorColors[key].trim()
+												: 'transparent'}
+											aria-hidden="true"
+										></span>
+									</div>
+									{#if colorInvalid}
+										<p class="field__error" id={`${fieldId}-error`} role="alert">
+											enter a valid hex color.
+										</p>
+									{/if}
+								</Field>
+							{/each}
+						</div>
+					</fieldset>
+					<div class="actions flavor-form__actions">
+						<button type="button" onclick={closeFlavorDialog}>cancel</button>
+						<button type="submit" class="button--primary">add flavor</button>
+					</div>
+				</form>
+			</SmallDialogView>
+		{/if}
 		<div class="nav-previews">
-			<div class="horizontal-nav-preview">
-				<Navbar test position="bottom" style="--loaf-nav-bg: var(--loaf-surface-secondary)">
-					<NavTab name="gallery" Icon={GridIcon} path="/" active />
-					<NavTab
-						name="test route"
-						Icon={LinkIcon}
-						path="/test2"
-						style="--loaf-nav-highlight: var(--loaf-accent)"
-					/>
-					<NavTab name="a very long test route" Icon={LinkIcon} path="/test3" />
-				</Navbar>
-			</div>
-			<div class="vertical-nav-preview">
-				<Navbar test position="left">
-					<NavbarLogo src="/icons/biology.jpg" alt="Ciabi logo" />
+			<div class="scrollable-nav-preview">
+				<Navbar test position="bottom" style="border-radius: var(--loaf-radius-md);">
 					<NavTab name="gallery" Icon={GridIcon} path="/" active />
 					<NavTab name="test route" Icon={LinkIcon} path="/test2" />
 					<NavTab name="a very long test route" Icon={LinkIcon} path="/test3" />
 				</Navbar>
 			</div>
+				<Navbar test position="left" style="border-radius: var(--loaf-radius-md);">
+					<NavbarLogo src="/icons/biology.jpg" alt="Ciabi logo" />
+					<NavTab name="gallery" Icon={GridIcon} path="/" active />
+					<NavTab name="test route" Icon={LinkIcon} path="/test2" />
+					<NavTab name="a very long test route" Icon={LinkIcon} path="/test3" />
+				</Navbar>
 		</div>
 
 		<div class="section-heading paragraph-text">
@@ -522,7 +761,7 @@
 			<p>tabs still scroll to the active item, but the browser scrollbar stays hidden.</p>
 		</div>
 		<div class="scrollable-nav-preview">
-			<Navbar test position="bottom">
+			<Navbar test position="bottom" style="border-radius: var(--loaf-radius-md);">
 				<NavTab name="first" Icon={GridIcon} path="/first" />
 				<NavTab name="second" Icon={LinkIcon} path="/second" />
 				<NavTab name="active tab" Icon={GridIcon} path="/active" active />
@@ -534,6 +773,70 @@
 </PageContainer>
 
 <style>
+	:global(dialog.dialog-container.gallery-flavor-dialog) {
+		overflow-y: auto;
+		justify-content: safe center;
+	}
+
+	:global(.gallery-flavor-dialog .small-dialog) {
+		width: min(54rem, calc(100vw - 5rem));
+		max-width: 54rem;
+		max-height: none;
+	}
+
+	:global(.gallery-flavor-dialog .dialog-inner-container) {
+		width: 100%;
+		overflow: visible;
+	}
+
+	.flavor-form,
+	.flavor-form__colors {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+	}
+
+	.flavor-form {
+		width: 100%;
+		text-align: left;
+	}
+
+	.flavor-form__colors {
+		min-width: 0;
+		margin: 0;
+		padding: 1rem;
+		border: 0.0625rem solid var(--loaf-border-color);
+		border-radius: var(--loaf-radius-md);
+	}
+
+	.flavor-form__color-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+		gap: 1rem;
+	}
+
+	.flavor-form__color-control {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+	}
+
+	.flavor-form__color-control :global(.input-wrapper) {
+		min-width: 0;
+	}
+
+	.flavor-form__swatch {
+		width: 2rem;
+		height: 2rem;
+		flex: none;
+		border: 0.0625rem solid var(--loaf-border-color);
+		border-radius: var(--loaf-radius-md);
+	}
+
+	.flavor-form__actions {
+		justify-content: flex-end;
+	}
+
 	.hero,
 	.gallery-section,
 	.section-heading,
@@ -670,7 +973,6 @@
 	}
 
 	.component-row,
-	.actions,
 	.emotion-row,
 	.nav-previews {
 		display: flex;
@@ -728,28 +1030,9 @@
 		align-items: stretch;
 	}
 
-	.horizontal-nav-preview,
-	.vertical-nav-preview,
-	.scrollable-nav-preview {
-		overflow: hidden;
-		border: 0.0625rem solid var(--loaf-button-stroke);
-		border-radius: var(--loaf-radius-md);
-		background: var(--loaf-nav-bg);
-	}
-
-	.horizontal-nav-preview {
-		width: min(100%, 30rem);
-		height: var(--loaf-navbar-height);
-	}
-
-	.vertical-nav-preview {
-		width: calc(var(--loaf-navbar-width) + var(--loaf-navbar-inner-padding) * 2);
-		height: 22rem;
-	}
 
 	.scrollable-nav-preview {
 		width: min(100%, 18rem);
-		height: var(--loaf-navbar-height);
 	}
 
 	.responsive-nav-grid {

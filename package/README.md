@@ -83,6 +83,50 @@ then import components from the package root:
 </Card>
 ```
 
+### form fields
+
+compose native labels, help text, and errors around any control. the form decides when a value is
+invalid. give the description and error IDs to the control through `ariaDescribedBy` so assistive
+technology reads them with the input:
+
+```svelte
+<script lang="ts">
+	import { Field, FieldDescription, FieldLabel, Input } from '@ciabi/loafkit-ui';
+
+	let username = $state('');
+	let submitted = $state(false);
+	let invalid = $derived(submitted && !username.trim());
+</script>
+
+<Field>
+	<FieldLabel htmlFor="profile-username">Username</FieldLabel>
+	<Input
+		id="profile-username"
+		bind:value={username}
+		ariaInvalid={invalid}
+		ariaDescribedBy={invalid ? 'username-help username-error' : 'username-help'}
+	/>
+	<FieldDescription id="username-help">This appears on your public profile.</FieldDescription>
+	{#if invalid}
+		<p class="field__error" id="username-error" role="alert">Enter a username.</p>
+	{/if}
+</Field>
+<button type="button" onclick={() => (submitted = true)}>Save profile</button>
+```
+
+`FormField` remains available for existing usage. new forms can compose `Field`, `FieldLabel`,
+and `FieldDescription` around any control. `Input` no longer renders its own description.
+use a native element with `field__error` for validation messages.
+
+the same field layout works for `Selector` and `Toggle`: give the control an `id`, point
+`FieldLabel` at it with `htmlFor`, and pass description/error IDs through `ariaDescribedBy`. both controls also accept
+an invalid state: `Selector` uses `invalid` for its border, while `Toggle` uses `ariaInvalid` on
+its switch. `Switcher` contains multiple buttons, so label the group with
+`ariaLabelledBy` pointing to a `FieldLabel` with an `id` instead of using `htmlFor`. it accepts
+`ariaDescribedBy` and `invalid` for help/error text and invalid styling. the component gallery
+shows all three in fields. `Switcher` leaves its button content to the caller, so set
+`aria-pressed` on those buttons when they represent a selected option.
+
 ### fonts
 
 just import the stylesheet bundle once near the root of your app to get started.
@@ -225,7 +269,7 @@ footer button needs it. `DialogContainer` is available for a different dialog la
 - Layout: `Basket`, `Loaf`, `PageContainer`
 - Navigation: `FlavorPicker`, `Navbar`, `NavbarLogo`, `NavTab`
 - Inputs: `Carousel`, `Input`, `Selector`, `Switcher`, `Toggle`, `URLButton`
-- Content: `Card`, `Codeblock`, `Contact`, `Emoticon`, `FormField`, `Markdown`, `Popover`, `Profile`, `Tags`
+- Content: `Card`, `Codeblock`, `Contact`, `Emoticon`, `Field`, `FieldLabel`, `FieldDescription`, `FormField`, `Markdown`, `Popover`, `Profile`, `Tags`
 - Dialogs: `DialogHolder`, `DialogContainer`, `SmallDialogView`, `PickerDialogView`, `createDialog`, `killDialog`
 - Emotions: `registerEmotion`, `registerEmotions`, `getEmotion`, `listEmotions`, `unregisterEmotion`
 - Flavors: `registerFlavor`, `registerFlavors`, `getFlavor`, `listFlavors`, `applyFlavor`, `unregisterFlavor`, `initializeFlavors`, `flavor`, `flavorType`

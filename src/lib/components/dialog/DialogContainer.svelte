@@ -116,6 +116,7 @@
 <style>
 	dialog {
 		display: flex;
+		color: var(--loaf-text);
 		flex-direction: column;
 		justify-content: center;
 		align-items: center;
@@ -132,9 +133,7 @@
 
 		inset-inline-start: unset;
 		inset-inline-end: unset;
-
-		overflow: hidden;
-	}
+}
 
 	dialog:modal {
 		inset-block-start: 0;
